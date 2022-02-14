@@ -1,4 +1,4 @@
-# Using emscripten to compile c++ code to wasm:
+### Using emscripten to compile c++ code to wasm:
 
 em++ --no-entry -O3 -DNDEBUG --bind bindings/\_\_Bindings.cpp -I(include header) source/_.cpp -s WASM=1 -s EXPORT_ES6=1 -s MODULARIZE=1 -o _.mjs
 
