@@ -1,76 +1,123 @@
-### Using emscripten to compile c++ code to wasm:
+<style>
+    red { color: Red }
+</style>
 
-em++ --no-entry -O3 -DNDEBUG --bind bindings/\_\_Bindings.cpp -I(include header) source/_.cpp -s WASM=1 -s EXPORT_ES6=1 -s MODULARIZE=1 -o _.mjs
+# I. Using emscripten to compile c++ code to wasm:
 
-# Modify output file (\*.mjs):
+```cmd
+em++ --no-entry -O3 -DNDEBUG --bind bindings/*Bindings.cpp -I(headerDir) source/*.cpp -s WASM=1 -s EXPORT_ES6=1 -s MODULARIZE=1 -o *.mjs
+```
 
-Add /_ eslint-disable _/ at top of the file, to avoid syntax errors.
+# II. Modify output file _(\*.mjs)_:
 
-Replace var \_scriptDir = import.meta.url; with:
+- Add `/* eslint-disable */` on <red>top</red>, to avoid syntax errors.
 
-var \_scriptDir =
-typeof document !== 'undefined' && document.currentScript
-? document.currentScript.src
-: undefined;
-if (typeof **filename !== 'undefined')
-\_scriptDir = \_scriptDir || **filename;
+- **Replace:**
 
-Replace scriptDirectory = self.location.href; with scriptDirectory = window.self.location.href;
+```js
+var _scriptDir = import.meta.url;
+```
 
-Replace:
+**to:**
 
+```js
+var _scriptDir = typeof document !== 'undefined' && document.currentScript ?
+    document.currentScript.src :
+    undefined;
+if (typeof ** filename !== 'undefined')
+    _scriptDir = _scriptDir || ** filename;
+```
+
+- **Replace:**
+
+```js
+scriptDirectory = self.location.href;
+```
+
+**to:**
+
+```js
+scriptDirectory = window.self.location.href;
+```
+
+- **Replace:**
+
+```js
 var wasmBinaryFile;
-if (Module['locateFile']) {
-wasmBinaryFile = 'hello2.wasm';
-if (!isDataURI(wasmBinaryFile)) {
-wasmBinaryFile = locateFile(wasmBinaryFile);
-}
+if (Module["locateFile"]) {
+  wasmBinaryFile = "hello2.wasm";
+  if (!isDataURI(wasmBinaryFile)) {
+    wasmBinaryFile = locateFile(wasmBinaryFile);
+  }
 } else {
-wasmBinaryFile = new URL('hello2.wasm', import.meta.url).toString();
+  wasmBinaryFile = new URL("hello2.wasm", import.meta.url).toString();
 }
+```
 
-with:
+**to:**
 
-var wasmBinaryFile = '';
+```js
+var wasmBinaryFile = "";
 if (!isDataURI(wasmBinaryFile)) {
-wasmBinaryFile = locateFile(wasmBinaryFile);
+  wasmBinaryFile = locateFile(wasmBinaryFile);
 }
+```
 
-Remove getBinary function;
+- **Remove** `getBinary` function
 
-Replace getBinaryPromise functions with:
+- **Replace** `getBinaryPromise` functions
 
+**with:**
+
+```js
 const getBinaryPromise = () =>
-new Promise((resolve, reject) => {
-fetch(wasmBinaryFile, { credentials: 'same-origin' })
-.then((response) => {
-if (!response['ok']) {
-throw (
-"failed to load wasm binary file at '" +
-wasmBinaryFile +
-"'"
+  new Promise((resolve, reject) => {
+    fetch(wasmBinaryFile, {
+      credentials: "same-origin",
+    })
+      .then((response) => {
+        if (!response["ok"]) {
+          throw "failed to load wasm binary file at '" + wasmBinaryFile + "'";
+        }
+        return response["arrayBuffer"]();
+      })
+      .then(resolve)
+      .catch(reject);
+  });
+```
+
+- **Replace:**
+
+```js
+if (
+  !wasmBinary &&
+  typeof WebAssembly.instantiateStreaming === "function" &&
+  !isDataURI(wasmBinaryFile) &&
+  !isFileURI(wasmBinaryFile) &&
+  typeof fetch === "function"
 );
-}
-return response['arrayBuffer']();
-})
-.then(resolve)
-.catch(reject);
-});
+```
 
-Replace if (!wasmBinary && typeof WebAssembly.instantiateStreaming === 'function' && typeof fetch === 'function'); with:
-if (!wasmBinary && typeof WebAssembly.instantiateStreaming === "function" && typeof fetch === "function");
+**with:**
 
-# Using wasm in javascript:
+```js
+if (
+  !wasmBinary &&
+  typeof WebAssembly.instantiateStreaming === "function" &&
+  typeof fetch === "function"
+);
+```
 
-import Sample from 'path/to/output.mjs';
+# III. Using wasm in javascript:
+
+```js
+import Sample from "path/to/output.mjs";
 
 const sample = Sample({
-locateFile: () =>
-'path/to/\*.wasm',
+  locateFile: () => "path/to/*.wasm",
 });
 
 sample.then((core) => {
-core.my_cpp_function(...my_params);
+  core.my_cpp_function(...my_params);
 });
-
-(This file is demo and will be edited)
+```
